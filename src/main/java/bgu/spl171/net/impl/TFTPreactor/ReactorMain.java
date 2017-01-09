@@ -9,6 +9,6 @@ import bgu.spl171.net.srv.Server;
  */
 public class ReactorMain {
     public static void main(String[] args) {
-        Server.reactor(5,7777,()->new EchoProtocol(),()->new LineMessageEncoderDecoder()).serve();
+        Server.reactor(5,7777, EchoProtocol::new, LineMessageEncoderDecoder::new).serve();
     }
 }
