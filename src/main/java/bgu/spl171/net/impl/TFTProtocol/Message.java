@@ -10,87 +10,87 @@ public class Message {
         this.opcode = opcode;
     }
 
-    public class ReadMessage extends Message {
+    public static class ReadMessage extends Message {
         String filename;
-        private ReadMessage(short opcode, String filename) {
-            super(opcode);
+        public ReadMessage(String filename) {
+            super((short) 1);
             this.filename = filename;
         }
     }
 
-    public class WriteMessage extends Message {
+    public static class WriteMessage extends Message {
         String filename;
-        private WriteMessage(short opcode, String filename) {
-            super(opcode);
+        public WriteMessage(String filename) {
+            super((short) 2);
             this.filename = filename;
         }
     }
 
-    public class DataMessage extends Message {
+    public static class DataMessage extends Message {
         short size;
         short block;
         byte[] bArr;
-        private DataMessage(short opcode, short size, short block, byte[] bArr) {
-            super(opcode);
+        public DataMessage(short size, short block, byte[] bArr) {
+            super((short) 3);
             this.size = size;
             this.block = block;
             this.bArr = bArr;
         }
     }
 
-    public class AckMessage extends Message {
+    public static class AckMessage extends Message {
         short block;
-        private AckMessage(short opcode, short block) {
-            super(opcode);
+        public AckMessage(short block) {
+            super((short) 4);
             this.block = block;
         }
     }
 
-    public class ErrMessage extends Message {
+    public static class ErrMessage extends Message {
         short errCode;
         String msg;
-        private ErrMessage(short opcode, short errCode, String msg) {
-            super(opcode);
+        public ErrMessage(short errCode, String msg) {
+            super((short) 5);
             this.errCode = errCode;
             this.msg = msg;
         }
     }
 
-    public class DirqMessage extends Message {
-        private DirqMessage(short opcode) {
-            super(opcode);
+    public static class DirqMessage extends Message {
+        public DirqMessage() {
+            super((short) 6);
         }
     }
 
-    public class LoginMessage extends Message {
+    public static class LoginMessage extends Message {
         String username;
-        private LoginMessage(short opcode, String username) {
-            super(opcode);
+        public LoginMessage(String username) {
+            super((short) 7);
             this.username = username;
         }
     }
 
-    public class DeleteMessage extends Message {
+    public static class DeleteMessage extends Message {
         String filename;
-        private DeleteMessage(short opcode, String filename) {
-            super(opcode);
+        public DeleteMessage(String filename) {
+            super((short) 8);
             this.filename = filename;
         }
     }
 
-    public class BcastMessage extends Message {
+    public static class BcastMessage extends Message {
         String filename;
         boolean added;
-        private BcastMessage(short opcode, boolean added, String filename) {
-            super(opcode);
+        public BcastMessage(boolean added, String filename) {
+            super((short) 9);
             this.filename = filename;
             this.added = added;
         }
     }
 
-    public class DisconnectMessage extends Message {
-        private DisconnectMessage(short opcode) {
-            super(opcode);
+    public static class DisconnectMessage extends Message {
+        public DisconnectMessage() {
+            super((short) 10);
         }
     }
 }

@@ -33,7 +33,10 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     }
                     else {
                         String filename = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
+                        Message m = new Message.ReadMessage(filename);
                         readerArr.clear();
+                        counter=0;
+                        return m;
                     }
                     //new read request
 
@@ -44,7 +47,10 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     }
                     else {
                         String filename = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
+                        Message m = new Message.WriteMessage(filename);
                         readerArr.clear();
+                        counter=0;
+                        return m;
                     }
                     //new write request
                     break;
@@ -66,7 +72,10 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     }
                     else { //end of file
                         // crate packet
+                        Message m = new Message.DataMessage(packetSize,blockNum,byteListToArray(readerArr));
                         readerArr.clear();
+                        counter=0;
+                        return m;
                     }
 
                     break;
@@ -75,6 +84,9 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                         shortArray[counter-2] = nextByte;
                         if(counter==3) {
                             packetSize = bytesToShort(shortArray);
+                            Message m = new Message.AckMessage(packetSize);
+                            counter=0;
+                            return m;
                         }
                     }
 
@@ -93,21 +105,28 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     else { //if finished
                         String ErrMsg = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
                         //add error
-
+                        Message m = new Message.ErrMessage(errorCode,ErrMsg);
                         readerArr.clear();
+                        counter=0;
+                        return m;
                     }
                     break;
                 case 6:
                     //execute dirc
-                    break;
+                    Message m = new Message.DirqMessage();
+                    counter=0;
+                    return m;
                 case 7:
                     if(nextByte!='\0') {
                         readerArr.add(nextByte);
                     }
                     else { //if finished
-                        String Username = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
+                        String username = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
                         ///log user
+                        Message m1 = new Message.LoginMessage(username);
                         readerArr.clear();
+                        counter=0;
+                        return m1;
                     }
                     break;
                 case 8:
@@ -116,7 +135,10 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     }
                     else {
                         String filename = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
+                        Message m2 = new Message.DeleteMessage(filename);
                         readerArr.clear();
+                        counter=0;
+                        return m2;
                     }
                     //new delete request
                     break;
@@ -130,13 +152,17 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     else {
                         String filename = new String(byteListToArray(readerArr), StandardCharsets.UTF_8);
                         //bcast
-
+                        Message m3 = new Message.BcastMessage(written,filename);
                         readerArr.clear();
+                        counter=0;
+                        return m3;
                     }
 
                     break;
                 case 10:
                     //disconnect
+                    Message m2 = new Message.DisconnectMessage();
+                    counter=-1;
                     break;
                 default:
                     //TODO ERROR
