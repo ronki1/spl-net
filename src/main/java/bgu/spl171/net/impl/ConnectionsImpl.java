@@ -13,7 +13,8 @@ import java.util.Map;
  */
 public class ConnectionsImpl implements Connections<Message> {
 
-    HashMap<Integer,ConnectionHandler> connections = new HashMap<>();
+    private HashMap<Integer,ConnectionHandler> connections = new HashMap<>();
+    private HashMap<Integer,String> names = new HashMap<>();
 
     @Override
     public boolean send(int connectionId, Message msg) {
@@ -40,6 +41,44 @@ public class ConnectionsImpl implements Connections<Message> {
     public boolean addConnection(int id, ConnectionHandler ch) {
         connections.put(id,ch);
         return true;
+    }
+
+    public boolean checkIfNameExists(String name) {
+        return  names.containsValue(name);
+    }
+
+    public boolean checkIfConnectionIdExists(int connId) {
+        return connections.containsKey(connId);
+    }
+
+    /**
+     *
+     * @param
+     * @param name
+     * @return if succeded returns true
+     */
+    public boolean setName(int connectionId,String name) {
+        if(!checkIfNameExists(name)) {
+            if(names.containsKey(connectionId)) {
+                return false;
+            }
+            else {
+                names.put(connectionId,name);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * removes a connectio
+     * @param connectionId
+     * @return true if succeded, false if not
+     */
+    public boolean removeConnection(int connectionId) {
+        boolean a1 = connections.remove(connectionId) != null;
+        boolean a2 = names.remove(connectionId) != null;
+        return a1||a2;
     }
 
 }

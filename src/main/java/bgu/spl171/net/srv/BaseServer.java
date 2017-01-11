@@ -16,7 +16,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<BidiMessagingProtocol<T>> protocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ServerSocket sock;
-    private ConnectionsImpl<T> connections;
+    private ConnectionsImpl connections;
 
     public BaseServer(
             int port,
@@ -31,7 +31,7 @@ public abstract class BaseServer<T> implements Server<T> {
 
     @Override
     public void serve() {
-        connections = new ConnectionsImpl<T>();
+        connections = new ConnectionsImpl();
         try (ServerSocket serverSock = new ServerSocket(port)) {
 
             this.sock = serverSock; //just to be able to close

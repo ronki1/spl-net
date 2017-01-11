@@ -24,6 +24,8 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
     private final SocketChannel chan;
     private final Reactor reactor;
 
+    private String uname;
+
     public NonBlockingConnectionHandler(
             MessageEncoderDecoder<T> reader,
             BidiMessagingProtocol<T> protocol,
