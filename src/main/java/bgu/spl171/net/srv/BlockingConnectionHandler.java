@@ -2,6 +2,8 @@ package bgu.spl171.net.srv;
 
 import bgu.spl171.net.api.MessageEncoderDecoder;
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
+import bgu.spl171.net.api.bidi.Connections;
+import bgu.spl171.net.impl.TFTProtocol.Message;
 import bgu.spl171.net.srv.bidi.ConnectionHandler;
 
 import java.io.BufferedInputStream;
@@ -61,5 +63,9 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void setProtocolParams(int connectionId, Connections<Message> connections) {
+        this.protocol.start(connectionId, (Connections<T>) connections);
     }
 }

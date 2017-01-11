@@ -4,6 +4,7 @@ import bgu.spl171.net.api.MessageEncoderDecoder;
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl171.net.api.bidi.Connections;
 import bgu.spl171.net.impl.ConnectionsImpl;
+import bgu.spl171.net.impl.TFTProtocol.TFTPMessageProtocol;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -44,8 +45,9 @@ public abstract class BaseServer<T> implements Server<T> {
                         clientSock,
                         encdecFactory.get(),
                         protocolFactory.get());
-
-                connections.addConnection(clientSock.getInetAddress().hashCode(),handler);
+                int connId = clientSock.getInetAddress().hashCode();
+                connections.addConnection(connId,handler);
+                handler.setProtocolParams(connId,connections);
                 execute(handler);
             }
         } catch (IOException ex) {

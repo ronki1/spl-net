@@ -127,6 +127,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                 break;
             case 7:
                 Message.LoginMessage lgm = (Message.LoginMessage) message;
+                System.out.println("LOGRQ "+lgm.username);
                 if(connections.checkIfNameExists(lgm.username)) {
                     connections.send(connectionId,new Message.ErrMessage((short) 7,"User already logged in – Login username already connected."));
                     break;
@@ -159,6 +160,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             case 9:
                 break;
             case 10:
+                System.out.println("DISC");
                 Message.DisconnectMessage dscm = (Message.DisconnectMessage) message;
                 if(connections.checkIfConnectionIdExists(connectionId)) {
                     connections.send(connectionId,new Message.AckMessage((short) 0));

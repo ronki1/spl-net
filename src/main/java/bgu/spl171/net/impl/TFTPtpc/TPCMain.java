@@ -1,6 +1,8 @@
 package bgu.spl171.net.impl.TFTPtpc;
 
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
+import bgu.spl171.net.impl.TFTProtocol.TFTPMessageProtocol;
+import bgu.spl171.net.impl.TFTProtocol.TFTPencdec;
 import bgu.spl171.net.srv.Server;
 
 /**
@@ -8,6 +10,9 @@ import bgu.spl171.net.srv.Server;
  */
 public class TPCMain {
     public static void main(String[] args) {
-        //Server.threadPerClient(args[0],)
+        Server.threadPerClient(Integer.parseInt(args[0]),
+                ()-> new TFTPMessageProtocol(),
+                ()-> new TFTPencdec()).
+                serve();
     }
 }

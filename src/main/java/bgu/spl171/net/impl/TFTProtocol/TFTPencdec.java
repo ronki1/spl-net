@@ -162,11 +162,11 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                 case 10:
                     //disconnect
                     Message m2 = new Message.DisconnectMessage();
-                    counter=-1;
-                    break;
+                    counter=0;
+                    return m2;
                 default:
-                    //TODO ERROR
-                    break;
+                    counter = 0;
+                    return new Message.ErrMessage((short) 4,"Illegal TFTP operation – Unknown Opcode.");
             }
         }
 
@@ -176,7 +176,59 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
 
     @Override
     public byte[] encode(Message message) {
-        return new byte[0];
+        byte[] retArr = new byte[2];
+        byte[] opcodeArr = shortToBytes(message.opcode);
+        switch (message.opcode) {
+            case 3: //case data
+                Message.DataMessage dm = (Message.DataMessage) message;
+                retArr = new byte[6+dm.bArr.length];
+                byte[] ps =shortToBytes(dm.size);
+                retArr[2] = ps[0];
+                retArr[3] = ps[1];
+                byte[] blockNum = shortToBytes(dm.block);
+                retArr[4] = blockNum[0];
+                retArr[5] = blockNum[1];
+                for (int j=6; j<retArr.length; j++){
+                    retArr[j] = dm.bArr[j-6];
+                }
+                break;
+            case 4: //case ACK
+                Message.AckMessage ackm = (Message.AckMessage) message;
+                retArr = new byte[4];
+                byte[] block = shortToBytes(ackm.block);
+                retArr[2] = block[0];
+                retArr[3] = block[1];
+                break;
+            case 5://case error
+                Message.ErrMessage errm = (Message.ErrMessage) message;
+                byte[] errContent = errm.msg.getBytes();
+                retArr = new byte[5+errContent.length];
+                byte[] errCode = shortToBytes(errm.errCode);
+                retArr[2] = errCode[0];
+                retArr[3] = errCode[1];
+                for (int j=4; j<retArr.length-1; j++) {
+                    retArr[j] = errContent[j-4];
+                }
+                retArr[retArr.length-1] = '\0';
+                break;
+            case 6://case DIRQ
+                Message.DirqMessage dirqm = (Message.DirqMessage) message;
+                break;
+            case 9://case BCAST
+                Message.BcastMessage bcastm = (Message.BcastMessage) message;
+                byte[] bcastFilename = bcastm.filename.getBytes();
+                retArr = new byte[4+bcastFilename.length];
+                retArr[2] = (byte) (bcastm.added ? 1:0);
+                for (int j=3; j<retArr.length-1; j++) {
+                    retArr[j] = bcastFilename[j-3];
+                }
+                retArr[retArr.length-1] = '\0';
+                break;
+        }
+
+        retArr[0] = opcodeArr[0];
+        retArr[1] = opcodeArr[1];
+        return retArr;
     }
 
     public short bytesToShort(byte[] byteArr)
