@@ -23,6 +23,18 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
             shortArray[counter]=nextByte;
             if(counter==1) {
                 opCode = bytesToShort(shortArray);
+                if(opCode == 6) {//DIRQ
+                    //execute dirc
+                    Message m = new Message.DirqMessage();
+                    counter=0;
+                    return m;
+                }
+                else if(opCode==10) {
+                    //disconnect
+                    Message m2 = new Message.DisconnectMessage();
+                    counter=0;
+                    return m2;
+                }
             }
         }
         else {
@@ -69,6 +81,12 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     }
                     else if(counter<6+packetSize) { //if reading data
                         readerArr.add(nextByte);
+                        if(counter == 6+packetSize-1) {//end of file
+                            Message m = new Message.DataMessage(packetSize,blockNum,byteListToArray(readerArr));
+                            readerArr.clear();
+                            counter=0;
+                            return m;
+                        }
                     }
                     else { //end of file
                         // crate packet
@@ -112,10 +130,7 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     }
                     break;
                 case 6:
-                    //execute dirc
-                    Message m = new Message.DirqMessage();
-                    counter=0;
-                    return m;
+
                 case 7:
                     if(nextByte!='\0') {
                         readerArr.add(nextByte);
@@ -160,10 +175,7 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
 
                     break;
                 case 10:
-                    //disconnect
-                    Message m2 = new Message.DisconnectMessage();
-                    counter=0;
-                    return m2;
+
                 default:
                     counter = 0;
                     return new Message.ErrMessage((short) 4,"Illegal TFTP operation – Unknown Opcode.");
@@ -228,7 +240,7 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
 
         retArr[0] = opcodeArr[0];
         retArr[1] = opcodeArr[1];
-        return retArr;
+            return retArr;
     }
 
     public short bytesToShort(byte[] byteArr)

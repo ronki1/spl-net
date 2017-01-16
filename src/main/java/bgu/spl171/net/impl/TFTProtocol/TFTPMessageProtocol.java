@@ -25,7 +25,8 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
     state currentState;
     byte[] writeBuffer;
     ArrayList<Byte> readBuffer = new ArrayList<Byte>();
-    short bytesSent, bytesReceived, bytesRemaining, blockNum;
+    int bytesSent, bytesReceived, bytesRemaining;
+    short blockNum;
     boolean sendZeroBits;
     File writtenFile;
     @Override
@@ -36,6 +37,10 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
 
     @Override
     public void process(Message message) {
+        if(!connections.checkIfUserLogged(connectionId) && message.opcode != 7) { //if user not logged
+            connections.send(connectionId,new Message.ErrMessage((short) 6,"User not logged in – Any opcode received before Login completes."));
+            return;
+        }
         short opCode = message.opcode;
         switch (opCode) {
             case 1:
@@ -45,7 +50,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                     try {
                         writeBuffer =Files.readAllBytes(f.toPath());
                         currentState = state.SendingFile;
-                        bytesSent=0; bytesRemaining =(short) writeBuffer.length;
+                        bytesSent=0; bytesRemaining = writeBuffer.length;
                         blockNum = 1;
                         if(bytesRemaining%512 == 0 && bytesRemaining>0) sendZeroBits=true;
                         else sendZeroBits = false;
@@ -109,7 +114,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                 String sendStr = "";
                 if (directoryListing != null) {
                     for (File child : directoryListing) {
-                        sendStr+=child.getName()+'\n';
+                        sendStr+=child.getName()+'\0';
                     }
                 } else {
                     // Handle the case where dir is not really a directory.
@@ -128,10 +133,10 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             case 7:
                 Message.LoginMessage lgm = (Message.LoginMessage) message;
                 System.out.println("LOGRQ "+lgm.username);
-                if(connections.checkIfNameExists(lgm.username)) {
+                /*if(connections.checkIfNameExists(lgm.username)) {
                     connections.send(connectionId,new Message.ErrMessage((short) 7,"User already logged in – Login username already connected."));
                     break;
-                }
+                }*/
                 if(connections.setName(connectionId,lgm.username)) {
                     connections.send(connectionId,new Message.AckMessage((short) 0));
                 }
@@ -164,7 +169,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                 Message.DisconnectMessage dscm = (Message.DisconnectMessage) message;
                 if(connections.checkIfConnectionIdExists(connectionId)) {
                     connections.send(connectionId,new Message.AckMessage((short) 0));
-                    connections.removeConnection(connectionId);
+                    connections.removeUsername(connectionId);
                 }
                 break;
         }
@@ -182,7 +187,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
     public boolean sendNextPacket() {
         boolean ret = false;
         if(bytesRemaining <= 512 && bytesRemaining!=0) {
-            connections.send(this.connectionId,new Message.DataMessage(bytesRemaining,blockNum,Arrays.copyOfRange(writeBuffer,bytesSent,bytesSent+bytesRemaining)));
+            connections.send(this.connectionId,new Message.DataMessage((short) bytesRemaining,blockNum,Arrays.copyOfRange(writeBuffer,bytesSent,bytesSent+bytesRemaining)));
             bytesRemaining = 0;
             bytesSent += bytesRemaining;
             ret = true;

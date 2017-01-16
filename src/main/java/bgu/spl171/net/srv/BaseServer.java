@@ -35,6 +35,7 @@ public abstract class BaseServer<T> implements Server<T> {
         connections = new ConnectionsImpl();
         try (ServerSocket serverSock = new ServerSocket(port)) {
 
+
             this.sock = serverSock; //just to be able to close
 
             while (!Thread.currentThread().isInterrupted()) {

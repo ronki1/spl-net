@@ -75,10 +75,14 @@ public class ConnectionsImpl implements Connections<Message> {
      * @param connectionId
      * @return true if succeded, false if not
      */
-    public boolean removeConnection(int connectionId) {
-        boolean a1 = connections.remove(connectionId) != null;
+    public boolean removeUsername(int connectionId) {
+        //boolean a1 = connections.remove(connectionId) != null;
         boolean a2 = names.remove(connectionId) != null;
-        return a1||a2;
+        return /*a1||*/a2;
+    }
+
+    public boolean checkIfUserLogged(int connectionId) {
+        return names.containsKey(connectionId);
     }
 
 }
