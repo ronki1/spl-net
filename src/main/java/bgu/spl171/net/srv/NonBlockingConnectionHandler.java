@@ -2,6 +2,8 @@ package bgu.spl171.net.srv;
 
 import bgu.spl171.net.api.MessageEncoderDecoder;
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
+import bgu.spl171.net.api.bidi.Connections;
+import bgu.spl171.net.impl.TFTProtocol.Message;
 import bgu.spl171.net.srv.bidi.ConnectionHandler;
 
 import java.io.IOException;
@@ -122,5 +124,9 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
     public void send(T msg) {
         writeQueue.add(ByteBuffer.wrap(encdec.encode(msg)));
         reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+    }
+
+    public void setProtocolParams(int connectionId, Connections<Message> connections) {
+        this.protocol.start(connectionId, (Connections<T>) connections);
     }
 }

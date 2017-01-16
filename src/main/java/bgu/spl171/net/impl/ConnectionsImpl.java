@@ -29,7 +29,7 @@ public class ConnectionsImpl implements Connections<Message> {
     @Override
     public void broadcast(Message msg) {
         for (Map.Entry<Integer,ConnectionHandler> entry : connections.entrySet()) {
-            entry.getValue().send(msg);
+            if(checkIfUserLogged(entry.getKey())) entry.getValue().send(msg);
         }
     }
 
@@ -83,6 +83,11 @@ public class ConnectionsImpl implements Connections<Message> {
 
     public boolean checkIfUserLogged(int connectionId) {
         return names.containsKey(connectionId);
+    }
+
+    public void killUser(int connId) {
+        disconnect(connId);
+        removeUsername(connId);
     }
 
 }

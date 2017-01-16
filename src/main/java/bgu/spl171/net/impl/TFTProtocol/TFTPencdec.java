@@ -77,6 +77,12 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                         shortArray[counter-4] = nextByte;
                         if(counter==5) {
                             blockNum = bytesToShort(shortArray);
+                            if(packetSize==0) {
+                                Message m = new Message.DataMessage(packetSize,blockNum,byteListToArray(readerArr));
+                                readerArr.clear();
+                                counter=0;
+                                return m;
+                            }
                         }
                     }
                     else if(counter<6+packetSize) { //if reading data

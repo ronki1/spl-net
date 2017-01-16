@@ -87,7 +87,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                         fos.write(ByteListToArray(readBuffer));
                         fos.close();
                         System.out.println("RRQ "+writtenFile.getName() +" complete");
-
+                        connections.send(connectionId,new Message.AckMessage(dm.block));
                         connections.broadcast(new Message.BcastMessage(true,writtenFile.getName()));
                         writtenFile = null;
                         bytesReceived=0;
@@ -98,7 +98,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                     }
                 }
                 else {
-                    connections.send(connectionId,new Message.AckMessage((short) (Math.floor(bytesReceived/512)+1)));
+                    connections.send(connectionId,new Message.AckMessage(dm.block));
                 }
                 break;
             case 4:
@@ -113,8 +113,10 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                 File[] directoryListing = dir.listFiles();
                 String sendStr = "";
                 if (directoryListing != null) {
-                    for (File child : directoryListing) {
-                        sendStr+=child.getName()+'\0';
+                    if(directoryListing.length != 0) {
+                        for (File child : directoryListing) {
+                            sendStr += child.getName() + '\0';
+                        }
                     }
                 } else {
                     // Handle the case where dir is not really a directory.
@@ -122,13 +124,18 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                     // to avoid race conditions with another process that deletes
                     // directories.
                 }
-                writeBuffer = sendStr.getBytes(StandardCharsets.UTF_8);
-                currentState = state.SendingFile;
-                bytesSent=0; bytesRemaining =(short) writeBuffer.length;
-                blockNum = 1;
-                if(bytesRemaining%512 == 0 && bytesRemaining>0) sendZeroBits=true;
-                else sendZeroBits = false;
-                sendNextPacket();
+                if(!sendStr.equals("")) {
+                    writeBuffer = sendStr.getBytes(StandardCharsets.UTF_8);
+                    currentState = state.SendingFile;
+                    bytesSent = 0;
+                    bytesRemaining = (short) writeBuffer.length;
+                    blockNum = 1;
+                    if (bytesRemaining % 512 == 0 && bytesRemaining > 0) sendZeroBits = true;
+                    else sendZeroBits = false;
+                    sendNextPacket();
+                } else {
+                    connections.send(connectionId,new Message.DataMessage((short)0,(short)1,new byte[0]));
+                }
                 break;
             case 7:
                 Message.LoginMessage lgm = (Message.LoginMessage) message;
@@ -197,12 +204,12 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             bytesRemaining-=512; bytesSent+=512;
             ret = true;
         }
-        else if(bytesRemaining==0 && sendZeroBits) {
+        blockNum++;
+        if(bytesRemaining==0 && sendZeroBits) {
             connections.send(this.connectionId,new Message.DataMessage((short)0,blockNum,new byte[0]));
             sendZeroBits=false;
             ret = true;
         }
-        blockNum++;
         return ret;
     }
 
@@ -250,5 +257,9 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             bArr[j] = al.get(j);
         }
         return bArr;
+    }
+
+    public void killConn(int connid) {
+        connections.killUser(connid);
     }
 }

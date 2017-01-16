@@ -18,6 +18,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ServerSocket sock;
     private ConnectionsImpl connections;
+    private int hashCounter = 0;
 
     public BaseServer(
             int port,
@@ -46,7 +47,9 @@ public abstract class BaseServer<T> implements Server<T> {
                         clientSock,
                         encdecFactory.get(),
                         protocolFactory.get());
-                int connId = clientSock.getInetAddress().hashCode();
+                int connId = clientSock.getInetAddress().hashCode()+hashCounter;
+                hashCounter++;
+                System.out.println("CONNID " + connId);
                 connections.addConnection(connId,handler);
                 handler.setProtocolParams(connId,connections);
                 execute(handler);
