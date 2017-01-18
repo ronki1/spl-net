@@ -87,6 +87,12 @@ public class Message {
             this.added = added;
         }
     }
+    public static class IllegalOpcode extends Message {
+        public IllegalOpcode() {
+            super((short) -1);
+        }
+    }
+
 
     public static class DisconnectMessage extends Message {
         public DisconnectMessage() {

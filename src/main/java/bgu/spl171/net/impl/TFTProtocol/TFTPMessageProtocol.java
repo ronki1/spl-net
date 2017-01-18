@@ -2,7 +2,6 @@ package bgu.spl171.net.impl.TFTProtocol;
 
 import bgu.spl171.net.api.bidi.BidiMessagingProtocol;
 import bgu.spl171.net.api.bidi.Connections;
-import bgu.spl171.net.impl.ConnectionsImpl;
 import bgu.spl171.net.srv.bidi.ConnectionHandler;
 
 import java.io.File;
@@ -13,13 +12,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by ron on 09/01/17.
  */
 public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
     int connectionId;
-    ConnectionsImpl connections;
+    Connections<Message> connections;
     File files = new File("Files");
     private enum state {Waiting, SendingFile, ReceivingFile};
     state currentState;
@@ -28,21 +29,26 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
     int bytesSent, bytesReceived, bytesRemaining;
     short blockNum;
     boolean sendZeroBits;
+    private static HashMap<Integer,String> names = new HashMap<>();
+    private static ArrayList<String> filesAwaiting = new ArrayList<>();
     File writtenFile;
     @Override
     public void start(int connectionId, Connections<Message> connections) {
         this.connectionId = connectionId;
-        this.connections = (ConnectionsImpl) connections;
+        this.connections = connections;
     }
 
     @Override
     public void process(Message message) {
-        if(!connections.checkIfUserLogged(connectionId) && message.opcode != 7) { //if user not logged
+        if(!checkIfUserLogged(connectionId) && message.opcode != 7) { //if user not logged
             connections.send(connectionId,new Message.ErrMessage((short) 6,"User not logged in – Any opcode received before Login completes."));
             return;
         }
         short opCode = message.opcode;
         switch (opCode) {
+            case -1:
+                connections.send(connectionId,new Message.ErrMessage((short)4,"Illegal TFTP operation – Unknown Opcode."));
+                break;
             case 1:
                 Message.ReadMessage m = (Message.ReadMessage) message;
                 File f = new File("Files/"+m.filename);
@@ -68,11 +74,12 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             case 2:
                 Message.WriteMessage wm = (Message.WriteMessage) message;
                 File f1 = new File("Files/"+wm.filename);
-                if(f1.exists()) {
+                if(f1.exists() || filesAwaiting.contains(wm.filename)) {
                     connections.send(connectionId,new Message.ErrMessage((short) 5,"File already exists – File name exists on WRQ."));
                 }
                 else {
                     writtenFile = f1;
+                    filesAwaiting.add(wm.filename);
                     currentState = state.ReceivingFile;
                     bytesReceived = 0;
                     System.out.println("WRQ "+wm.filename);
@@ -87,8 +94,9 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                         fos.write(ByteListToArray(readBuffer));
                         fos.close();
                         System.out.println("RRQ "+writtenFile.getName() +" complete");
+                        filesAwaiting.remove(writtenFile.getName());
                         connections.send(connectionId,new Message.AckMessage(dm.block));
-                        connections.broadcast(new Message.BcastMessage(true,writtenFile.getName()));
+                        broadcast(new Message.BcastMessage(true,writtenFile.getName()));
                         writtenFile = null;
                         bytesReceived=0;
                         currentState = state.Waiting;
@@ -105,7 +113,8 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                 ackReceived((Message.AckMessage) message);
                 break;
             case 5:
-
+                System.out.println(((Message.ErrMessage) message).msg);
+                zeroAll();
                 break;
             case 6:
                 currentState = state.SendingFile;
@@ -144,7 +153,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                     connections.send(connectionId,new Message.ErrMessage((short) 7,"User already logged in – Login username already connected."));
                     break;
                 }*/
-                if(connections.setName(connectionId,lgm.username)) {
+                if(setName(connectionId,lgm.username)) {
                     connections.send(connectionId,new Message.AckMessage((short) 0));
                 }
                 else {
@@ -157,7 +166,8 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                 if(toDelete.exists()) {
                     try {
                         if (toDelete.delete()) {
-                            connections.broadcast(new Message.BcastMessage(false,delm.filename));
+                            connections.send(connectionId,new Message.AckMessage((short) 0));
+                            broadcast(new Message.BcastMessage(false,delm.filename));
                         } else {
                             connections.send(connectionId, new Message.ErrMessage((short) 1, "File not found – DELRQ of non-existing file"));
                         }
@@ -174,9 +184,9 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             case 10:
                 System.out.println("DISC");
                 Message.DisconnectMessage dscm = (Message.DisconnectMessage) message;
-                if(connections.checkIfConnectionIdExists(connectionId)) {
+                if(checkIfConnectionIdExists(connectionId)) {
                     connections.send(connectionId,new Message.AckMessage((short) 0));
-                    connections.removeUsername(connectionId);
+                    removeUsername(connectionId);
                 }
                 break;
         }
@@ -220,6 +230,10 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
     public boolean receiveNextPacket(Message.DataMessage dm) {
         boolean ret = false;
         if(currentState == state.ReceivingFile) {
+            if(dm.size>512 || dm.size<0) {
+                connections.send(connectionId,new Message.ErrMessage((short) 0,"Size Wrong"));
+                return false;
+            }
             if(dm.size != 0) {
                 addBytesToList(readBuffer,dm.bArr);
             }
@@ -234,6 +248,11 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
 
     public boolean ackReceived(Message.AckMessage m) {
         System.out.println("ACK" + m.block);
+        if(m.block!=0 && m.block != blockNum-1) {
+            connections.send(connectionId,new Message.ErrMessage((short) 0, "WTF ACK"));
+            zeroAll();
+            return false;
+        }
         switch (currentState) {
             case SendingFile:
                 if (!sendNextPacket()) {
@@ -260,6 +279,66 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
     }
 
     public void killConn(int connid) {
-        connections.killUser(connid);
+        killUser(connid);
     }
+    public boolean checkIfNameExists(String name) {
+        return  names.containsValue(name);
+    }
+
+    public boolean checkIfConnectionIdExists(int connId) {
+        return names.containsKey(connId);
+    }
+
+    /**
+     *
+     * @param
+     * @param name
+     * @return if succeded returns true
+     */
+    public boolean setName(int connectionId,String name) {
+        if(!checkIfNameExists(name)) {
+            if(names.containsKey(connectionId)) {
+                return false;
+            }
+            else {
+                names.put(connectionId,name);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * removes a connectio
+     * @param connectionId
+     * @return true if succeded, false if not
+     */
+    public boolean removeUsername(int connectionId) {
+        //boolean a1 = connections.remove(connectionId) != null;
+        boolean a2 = names.remove(connectionId) != null;
+        return /*a1||*/a2;
+    }
+
+    public boolean checkIfUserLogged(int connectionId) {
+        return names.containsKey(connectionId);
+    }
+
+    public void killUser(int connId) {
+        removeUsername(connId);
+    }
+
+    public void broadcast(Message msg) {
+        for (Map.Entry<Integer,String> entry : names.entrySet()) {
+            if(checkIfUserLogged(entry.getKey())) connections.send(entry.getKey(),msg);
+        }
+    }
+
+    public void zeroAll() {
+        currentState=state.Waiting;
+        readBuffer.clear();
+        bytesSent=0; bytesReceived=0; bytesRemaining=0;
+        blockNum=0;
+        sendZeroBits=false;
+    }
+
 }

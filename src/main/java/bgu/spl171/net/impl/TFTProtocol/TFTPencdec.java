@@ -35,6 +35,12 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
                     counter=0;
                     return m2;
                 }
+
+                if(opCode>10|| opCode<0) {
+                    counter = 0;
+                    readerArr.clear();
+                    return new Message.IllegalOpcode();
+                }
             }
         }
         else {
@@ -184,7 +190,8 @@ public class TFTPencdec implements MessageEncoderDecoder<Message> {
 
                 default:
                     counter = 0;
-                    return new Message.ErrMessage((short) 4,"Illegal TFTP operation – Unknown Opcode.");
+                    readerArr.clear();
+                    return new Message.IllegalOpcode();
             }
         }
 
