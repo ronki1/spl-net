@@ -143,7 +143,11 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
                     else sendZeroBits = false;
                     sendNextPacket();
                 } else {
-                    connections.send(connectionId,new Message.DataMessage((short)0,(short)1,new byte[0]));
+                    blockNum=0; bytesRemaining=0; sendZeroBits=true;
+                    writeBuffer = new byte[0];
+                    bytesSent = 0;
+                    bytesRemaining = (short) writeBuffer.length;
+                    sendNextPacket();
                 }
                 break;
             case 7:
@@ -219,6 +223,7 @@ public class TFTPMessageProtocol implements BidiMessagingProtocol<Message> {
             connections.send(this.connectionId,new Message.DataMessage((short)0,blockNum,new byte[0]));
             sendZeroBits=false;
             ret = true;
+            blockNum++;
         }
         return ret;
     }

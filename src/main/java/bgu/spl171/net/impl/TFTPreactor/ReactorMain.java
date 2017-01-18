@@ -11,6 +11,6 @@ import bgu.spl171.net.srv.Server;
  */
 public class ReactorMain {
     public static void main(String[] args) {
-        Server.reactor(5,7777, TFTPMessageProtocol::new, TFTPencdec::new).serve();
+        Server.reactor(Runtime.getRuntime().availableProcessors(),Integer.parseInt(args[0]), TFTPMessageProtocol::new, TFTPencdec::new).serve();
     }
 }
